@@ -491,6 +491,11 @@ void ICACHE_FLASH_ATTR httpdSentCb(ConnTypePtr rconn, char *remIp, int remPort) 
 	if (conn->cgi==NULL) return;
 
 	sendBuff=malloc(MAX_SENDBUFF_LEN);
+	if (sendBuff == NULL)
+	{
+		httpd_printf("Send Buffer Out of Memory\n");
+		return;
+	}
 	conn->priv->sendBuff=sendBuff;
 	conn->priv->sendBuffLen=0;
     conn->priv->sendBuffMax = MAX_SENDBUFF_LEN;
@@ -653,9 +658,16 @@ static void ICACHE_FLASH_ATTR httpdParseHeader(char *h, HttpdConnData *conn) {
 void ICACHE_FLASH_ATTR httpdRecvCb(ConnTypePtr rconn, char *remIp, int remPort, char *data, unsigned short len) {
 	int x, r;
 	char *p, *e;
-	char *sendBuff=malloc(MAX_SENDBUFF_LEN);
+	char *sendBuff;
+	
 	HttpdConnData *conn=rconn->reverse;
 	if (conn==NULL) return;
+	sendBuff = malloc(MAX_SENDBUFF_LEN);
+	if (sendBuff == NULL)
+	{
+		httpd_printf("Receive Call Back out of memory\n");
+		return;
+	}
 	conn->priv->sendBuff=sendBuff;
 	conn->priv->sendBuffLen=0;
     conn->priv->sendBuffMax = MAX_SENDBUFF_LEN;
@@ -769,14 +781,32 @@ int ICACHE_FLASH_ATTR httpdConnectCb(ConnTypePtr conn, char *remIp, int remPort)
 		return 0;
 	}
 	connData[i]=malloc(sizeof(HttpdConnData));
+	if (connData[i] == NULL)
+	{
+		httpd_printf("Out of HTTP connection memory\n");
+		return 0;
+	}
 	memset(connData[i], 0, sizeof(HttpdConnData));
 	connData[i]->priv=malloc(sizeof(HttpdPriv));
+	if (connData[i]->priv == NULL)
+	{
+		httpd_printf("Out of HTTP Connection Memory 2\n");
+		free(connData[i]);
+		return 0;
+	}
 	memset(connData[i]->priv, 0, sizeof(HttpdPriv));
 	connData[i]->conn=conn;
 	conn->reverse = connData[i];
 	connData[i]->slot=i;
 	connData[i]->priv->headPos=0;
 	connData[i]->post=malloc(sizeof(HttpdPostData));
+	if (connData[i]->post == NULL)
+	{
+		httpd_printf("Out of HTTP Connection Memory 3\n");
+		free(connData[i]->priv);
+		free(connData[i]);
+		return 0;
+	}
 	memset(connData[i]->post, 0, sizeof(HttpdPostData));
 	connData[i]->post->buff=NULL;
 	connData[i]->post->buffLen=0;
